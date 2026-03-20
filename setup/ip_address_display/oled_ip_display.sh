@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# OLED IP Address Display Script
+# Works on both Jetson and Raspberry Pi platforms
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Change to the script directory
+cd "$SCRIPT_DIR"
+
+# Activate the virtual environment
+source /home/jetson/venv/bin/activate
+
+# Run the Python script using the virtual environment's Python
+python3 "$SCRIPT_DIR/oled_ip_display.py"

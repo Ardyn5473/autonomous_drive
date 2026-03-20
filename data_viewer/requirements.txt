@@ -1,0 +1,16 @@
+# Requires Python 3.11 or 3.12
+Flask==2.3.3
+flask-cors==4.0.0
+# numpy==1.24.3 # for python 3.11
+numpy==1.26.4 # for python 3.12
+Werkzeug==2.3.7
+
+# Training dependencies
+# Note: Raspberry Pi 4 (Cortex-A72, ARMv8.0) requires torch<=2.3.1
+# PyTorch 2.4.0+ uses LSE (Large System Extensions) instructions (e.g. ldaddal)
+# in libarm_compute, which require ARMv8.1+, causing "Illegal instruction" on RPi4.
+# See: https://github.com/pytorch/pytorch/issues/kernel-LSE
+torch>=2.0.0,<=2.3.1
+torchvision>=0.15.0,<=0.18.1
+mlflow>=2.10.0
+send2trash>=1.8.0

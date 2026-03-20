@@ -1,0 +1,21 @@
+{
+  "name": "Data Viewer",
+  "short_name": "DataViewer",
+  "description": "学習データを可視化・管理するためのWebベースビューアアプリケーション",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f3ed",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/static/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

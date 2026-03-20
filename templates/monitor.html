@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Togikaidrive Monitor</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .main-wrapper {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100vh;
+        }
+        header {
+            background-color: #3b5998;
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .container {
+            display: flex;
+            flex-wrap: nowrap;
+            padding: 8px;
+            flex: 1;
+            min-height: 0;
+            position: relative;
+        }
+        .camera-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background-color: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            min-width: 200px;
+        }
+        #cameraFeed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .control-container {
+            width: 480px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            flex-shrink: 0;
+            min-width: 300px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .form-grid-full {
+            grid-column: 1 / -1;
+        }
+        .control-container h2 {
+            font-size: 18px;
+            border-bottom: 2px solid #3b5998;
+            margin-bottom: 12px;
+        }
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        button {
+            padding: 8px 12px;
+            font-size: 13px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s, color 0.3s;
+        }
+        #setConfigButton {
+            background-color: #f9c74f;
+            color: black;
+            width: 100%;
+            margin-top: 8px;
+        }
+        #setConfigButton:disabled {
+            background-color: #f4f4f9;
+            color: #999;
+            cursor: not-allowed;
+        }
+        button.active {
+            background-color: #3b5998;
+            color: white;
+        }
+        button.inactive {
+            background-color: #ddd;
+            color: #666;
+        }
+        .form-row {
+            margin-bottom: 6px;
+        }
+        label {
+            font-size: 12px;
+            display: block;
+            margin-bottom: 2px;
+        }
+        input, select {
+            width: 100%;
+            padding: 6px;
+            font-size: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .realtime-data {
+            padding: 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin: 8px;
+            height: 120px;
+            overflow-y: auto;
+            display: flex;
+            gap: 50px;
+            min-height: 80px;
+        }
+        .realtime-data-left, .realtime-data-right {
+            flex: 1;
+        } 
+        .realtime-data h2 {
+            margin: 0 0 8px;
+            font-size: 16px;
+            border-bottom: 2px solid #3b5998;
+            display: inline-block;
+            padding-bottom: 4px;
+        }
+        .realtime-data div {
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+        #ultrasonicChart {
+            margin-top: 5px;
+            height: 60px !important;
+        }
+        #configUpdateResult {
+            margin-top: 8px;
+            font-size: 12px;
+            color: green;
+        }
+        /* Resizer styles */
+        .resizer-horizontal {
+            width: 8px;
+            cursor: col-resize;
+            background-color: #ddd;
+            position: relative;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        .resizer-horizontal:hover {
+            background-color: #3b5998;
+        }
+        .resizer-vertical {
+            height: 8px;
+            cursor: row-resize;
+            background-color: #ddd;
+            position: relative;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        .resizer-vertical:hover {
+            background-color: #3b5998;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        <div class="container">
+            <!-- カメラ映像 -->
+            <div class="camera-container">
+                <img id="cameraFeed" alt="Camera feed" style="display: none;">
+                <canvas id="overlayCanvas"></canvas> <!-- This canvas will hold the arrows -->
+            </div>
+
+            <!-- 水平リサイザー -->
+            <div class="resizer-horizontal" id="horizontalResizer"></div>
+
+            <!-- Control & Config -->
+            <div class="control-container">
+            <h2>Control & Config</h2>
+            <div class="buttons">
+                <button id="pauseButton" class="inactive" onclick="toggleDriveControl('pause')">Pause</button>
+                <button id="resumeButton" class="inactive" onclick="toggleDriveControl('resume')">Resume</button>
+            </div>
+            <form id="configForm">
+                <div class="form-grid">
+                    <div class="form-row form-grid-full">
+                        <label>PLAN:</label>
+                        <select name="PLAN" id="planSelect" onchange="updateModelOptions(this.value)">
+                            <option value="go_straight">go_straight</option>
+                            <option value="right_left_3">right_left_3</option>
+                            <option value="right_left_3_records">right_left_3_records</option>
+                            <option value="wall_follow">wall_follow</option>
+                            <option value="wall_follow_pid">wall_follow_pid</option>
+                            <option value="nn">nn</option>
+                            <option value="cnn">cnn</option>
+                        </select>
+                    </div>
+                    <div class="form-row form-grid-full">
+                        <label>MODEL_NAME:</label>
+                        <select id="modelSelect" name="MODEL_NAME"></select>
+                    </div>
+                    <div class="form-row form-grid-full">
+                        <label>HAND_SIDE (for wall_follow):</label>
+                        <select name="HAND_SIDE" id="handSideSelect">
+                            <option value="right">Right</option>
+                            <option value="left">Left</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label>FORWARD_STRAIGHT:</label>
+                        <input type="text" name="FORWARD_STRAIGHT" value="0.4">
+                    </div>
+                    <div class="form-row">
+                        <label>FORWARD_CORNER:</label>
+                        <input type="text" name="FORWARD_CORNER" value="0.3">
+                    </div>
+                    <div class="form-row">
+                        <label>STOP_RANGE:</label>
+                        <input type="text" name="STOP_RANGE" value="0.5">
+                    </div>
+                    <div class="form-row">
+                        <label>BACKWARD_RANGE:</label>
+                        <input type="text" name="BACKWARD_RANGE" value="0.5">
+                    </div>
+                    <div class="form-row">
+                        <label>DETECTION_RANGE:</label>
+                        <input type="text" name="DETECTION_RANGE" value="0.7">
+                    </div>
+                    <div class="form-row">
+                        <label>RIGHT_LEFT_RANGE:</label>
+                        <input type="text" name="RIGHT_LEFT_RANGE" value="0.3">
+                    </div>
+                    <div class="form-row">
+                        <label>TARGET_RANGE:</label>
+                        <input type="text" name="TARGET_RANGE" value="0.4">
+                    </div>
+                    <div class="form-row">
+                        <label>TARGET_RANGE_ADJUSTMENT:</label>
+                        <input type="text" name="TARGET_RANGE_ADJUSTMENT" value="0.1">
+                    </div>
+                </div>
+                <button id="setConfigButton" type="button" onclick="setConfig()" disabled>Set Config</button>
+            </form>
+            <div id="configUpdateResult"></div>
+        </div>
+    </div>
+
+    <!-- 垂直リサイザー -->
+    <div class="resizer-vertical" id="verticalResizer"></div>
+
+    <!-- Realtime Data -->
+    <div class="realtime-data">
+        <!-- 左側のデータ表示 -->
+        <div class="realtime-data-left">
+            <h2>Realtime Data</h2>
+            <div>Mode: <span id="mode"></span></div>
+            <div>Steering Value: <span id="steering_value"></span></div>
+            <div>Throttle Value: <span id="throttle_value"></span></div>
+            <div>Timestamp: <span id="timestamp"></span></div>
+        </div>
+
+        <!-- 中央のコントロール表示 -->
+        <div class="realtime-data-center" style="flex: 0 0 180px; display: flex; flex-direction: row;  justify-content: flex-start; gap: 15px; padding-left: 10px;">
+            <div style="text-align: center;">
+                <div style="font-size: 12px; margin-bottom: 5px; font-weight: bold;">Steering</div>
+                <canvas id="steeringCanvas" width="70" height="70" style="border: 1px solid #ccc; border-radius: 50%;"></canvas>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 12px; margin-bottom: 5px; font-weight: bold;">Throttle</div>
+                <canvas id="throttleCanvas" width="50" height="70" style="border: 1px solid #ccc; border-radius: 5px;"></canvas>
+            </div>
+        </div>
+
+        <!-- 右側のセンサー可視化表示 -->
+        <div class="realtime-data-right">
+        <!-- センサー可視化用キャンバス -->
+        <canvas id="sensorCanvas" width="400" height="200"></canvas>
+    </div>
+    </div> <!-- end of main-wrapper -->
+
+    <script>
+        // Fetch models (Promiseを返す)
+        function fetchModels() {
+            return fetch('/get_models')
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error('Failed to fetch models');
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    // data.models を返す
+                    return data.models;
+                })
+                .catch(err => {
+                    console.error('Error fetching models:', err);
+                    throw err;
+                });
+        }
+
+        // Update MODEL_NAME options when PLAN changes
+        function updateModelOptions(plan) {
+            fetchModels()
+                .then(models => {
+                    const modelSelect = document.getElementById('modelSelect');
+                    modelSelect.innerHTML = ''; // Clear existing options
+
+                    // modelsが取れなかった場合のフォールバック
+                    if (!models || !Array.isArray(models)) {
+                        const noModelOption = document.createElement('option');
+                        noModelOption.value = '';
+                        noModelOption.textContent = 'No models available';
+                        modelSelect.appendChild(noModelOption);
+                        return;
+                    }
+
+                    // PLANに応じて絞り込み
+                    const filteredModels = models.filter(model => {
+                        if (plan === 'nn') {
+                            return model.includes('model_nn');
+                        } else if (plan === 'cnn') {
+                            return model.includes('model_cnn');
+                        }
+                        // go_straight 等、nn/cnn以外の場合はモデル指定不要とみなし
+                        return false;
+                    });
+
+                    // Populate MODEL_NAME options
+                    if (filteredModels.length > 0) {
+                        filteredModels.forEach(model => {
+                            const option = document.createElement('option');
+                            option.value = model;
+                            option.textContent = model;
+                            modelSelect.appendChild(option);
+                        });
+                    } else {
+                        const noModelOption = document.createElement('option');
+                        noModelOption.value = '';
+                        noModelOption.textContent = 'No models available';
+                        modelSelect.appendChild(noModelOption);
+                    }
+                })
+                .catch(err => console.error('updateModelOptions error:', err));
+        }
+
+        // Handle PLAN changes and reload the system (現在未使用のようなので残す)
+        function handlePlanChange(plan) {
+            console.log('PLAN changed to:', plan);
+            reloadPlan(plan);
+        }
+
+        // Reload the system with the selected PLAN (現在未使用のようなので残す)
+        function reloadPlan(plan) {
+            fetch('/reload_system', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: plan })
+            })
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error('Failed to reload system');
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    console.log('System reloaded:', data);
+                    alert('System reloaded with new plan: ' + plan);
+                })
+                .catch(err => console.error('Error reloading system:', err));
+        }
+
+        // WebSocket 接続とハンドリング
+        let websocket = null;
+        let reconnectInterval = null;
+        let isConnecting = false;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        
+        function connectWebSocket() {
+            if (isConnecting || (websocket && websocket.readyState === WebSocket.CONNECTING)) {
+                console.log('WebSocket connection already in progress');
+                return;
+            }
+            
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                console.log('WebSocket already connected');
+                return;
+            }
+            
+            isConnecting = true;
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            console.log(`Connecting to WebSocket: ${wsUrl}`);
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = function() {
+                console.log('WebSocket connected successfully');
+                isConnecting = false;
+                reconnectAttempts = 0;
+                if (reconnectInterval) {
+                    clearInterval(reconnectInterval);
+                    reconnectInterval = null;
+                }
+            };
+            
+            websocket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
+                }
+            };
+            
+            websocket.onclose = function(event) {
+                console.log(`WebSocket disconnected. Code: ${event.code}, Reason: ${event.reason}`);
+                websocket = null;
+                isConnecting = false;
+                
+                // 自動再接続（最大試行回数まで）
+                if (reconnectAttempts < maxReconnectAttempts && !reconnectInterval) {
+                    reconnectAttempts++;
+                    console.log(`Attempting to reconnect... (${reconnectAttempts}/${maxReconnectAttempts})`);
+                    reconnectInterval = setTimeout(() => {
+                        reconnectInterval = null;
+                        connectWebSocket();
+                    }, 3000);
+                } else if (reconnectAttempts >= maxReconnectAttempts) {
+                    console.error('Max reconnection attempts reached. Please refresh the page.');
+                }
+            };
+            
+            websocket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                isConnecting = false;
+            };
+        }
+        
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'image':
+                    updateCameraImage(data.data);
+                    break;
+                case 'sensor_data':
+                    updateSensorData(data.data);
+                    break;
+                case 'control_response':
+                    console.log('Control response:', data);
+                    break;
+                case 'config_response':
+                    if (data.config) {
+                        handleGetConfigResponse(data);
+                    } else {
+                        handleConfigResponse(data);
+                    }
+                    break;
+                case 'error':
+                    console.error('WebSocket error:', data.message);
+                    break;
+            }
+        }
+        
+        function updateCameraImage(base64Data) {
+            const img = document.getElementById('cameraFeed');
+            img.src = 'data:image/jpeg;base64,' + base64Data;
+            img.style.display = 'block';
+        }
+        
+        function updateSensorData(data) {
+            // デバッグ出力（最初の10回のみ）
+            if (!updateSensorData.debugCount) updateSensorData.debugCount = 0;
+            if (updateSensorData.debugCount < 10) {
+                console.log(`[DEBUG ${updateSensorData.debugCount}] updateSensorData called:`, {
+                    steering: data.steering_value,
+                    throttle: data.throttle_value,
+                    ultrasonicKeys: data.ultrasonic_ranges ? Object.keys(data.ultrasonic_ranges) : 'null/undefined',
+                    ultrasonicValues: data.ultrasonic_ranges,
+                    rangesKeys: data.ranges ? Object.keys(data.ranges) : 'null/undefined',
+                    rangesValues: data.ranges
+                });
+                updateSensorData.debugCount++;
+            }
+
+            document.getElementById('mode').textContent = data.mode || 'N/A';
+            document.getElementById('steering_value').textContent = (data.steering_value !== undefined && data.steering_value !== null) ? data.steering_value : 'N/A';
+            document.getElementById('throttle_value').textContent = (data.throttle_value !== undefined && data.throttle_value !== null) ? data.throttle_value : 'N/A';
+            document.getElementById('timestamp').textContent = data.timestamp || 'N/A';
+
+            // ステアリングハンドルの更新
+            const steeringValue = (data.steering_value !== undefined && data.steering_value !== null) ? data.steering_value : 0;
+            drawSteeringWheel(steeringValue);
+
+            // スロットルゲージの更新
+            const throttleValue = (data.throttle_value !== undefined && data.throttle_value !== null) ? data.throttle_value : 0;
+            drawThrottleGauge(throttleValue);
+
+            // センサー可視化の更新（ultrasonic_rangesまたはrangesを使用）
+            const sensorRanges = data.ultrasonic_ranges || data.ranges || {};
+            drawSensorVisualization(sensorRanges);
+        }
+        
+        function sendWebSocketMessage(message) {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify(message));
+            } else {
+                console.error('WebSocket is not connected');
+            }
+        }
+
+        // Toggle Drive Control buttons
+        function toggleDriveControl(action) {
+            sendWebSocketMessage({
+                type: 'control',
+                action: action
+            });
+            
+            const pauseButton = document.getElementById('pauseButton');
+            const resumeButton = document.getElementById('resumeButton');
+            const setConfigButton = document.getElementById('setConfigButton');
+            
+            if (action === 'pause') {
+                pauseButton.classList.add('active');
+                pauseButton.classList.remove('inactive');
+                resumeButton.classList.add('inactive');
+                resumeButton.classList.remove('active');
+                setConfigButton.disabled = false;
+            } else if (action === 'resume') {
+                resumeButton.classList.add('active');
+                resumeButton.classList.remove('inactive');
+                pauseButton.classList.add('inactive');
+                pauseButton.classList.remove('active');
+                setConfigButton.disabled = true;
+            }
+        }
+
+        // Set Config
+        function setConfig() {
+            const form = document.getElementById("configForm");
+            const formData = {};
+
+            Array.from(form.elements).forEach(elem => {
+                if (elem.name) formData[elem.name] = elem.value;
+            });
+
+            sendWebSocketMessage({
+                type: 'set_config',
+                config: formData
+            });
+        }
+        
+        function handleConfigResponse(data) {
+            if (data.status === "ok" || data.status === "partial_success") {
+                document.getElementById("configUpdateResult").textContent 
+                    = "Updated keys: " + data.updated_keys.join(", ");
+            } else {
+                document.getElementById("configUpdateResult").textContent 
+                    = "Error: " + JSON.stringify(data);
+            }
+        }
+
+        // Update realtime data (WebSocket経由で受信するため、この関数は使用しない)
+        // function updateRealtimeData() {
+        //     // WebSocketでリアルタイムデータを受信するため、この関数は不要
+        // }
+
+        // Fetch config and set defaults (WebSocket経由で取得)
+        function fetchConfigAndSetDefaults() {
+            sendWebSocketMessage({
+                type: 'get_config'
+            });
+        }
+        
+        function handleGetConfigResponse(data) {
+            if (data.status === "ok" && data.config) {
+                const config = data.config;
+
+                // 各フォーム要素に初期値を設定
+                if (config.FORWARD_STRAIGHT) {
+                    document.querySelector('input[name="FORWARD_STRAIGHT"]').value = config.FORWARD_STRAIGHT;
+                }
+                if (config.FORWARD_CORNER) {
+                    document.querySelector('input[name="FORWARD_CORNER"]').value = config.FORWARD_CORNER;
+                }
+                if (config.PLAN) {
+                    document.querySelector('select[name="PLAN"]').value = config.PLAN;
+                    updateModelOptions(config.PLAN);
+                }
+                if (config.HAND_SIDE) {
+                    document.querySelector('select[name="HAND_SIDE"]').value = config.HAND_SIDE;
+                }
+            } else {
+                console.error('Error fetching config:', data.message);
+            }
+        }
+
+
+        // センサー可視化キャンバス（グローバル変数）
+        let sensorCanvas = null;
+        let sensorCtx = null;
+
+        // センサー配置定義（ビーム幅統一版）
+        const sensorConfig = {
+            // 前方センサー群
+            FrFR: { 
+                angle: -Math.PI / 2,   // 前方中央（上方向）
+                arc: Math.PI / 6,      // 30度の扇
+                x: 0, y: -20,          // 車体前方（円の縁）
+                label: '前方'
+            },
+            FrLH: { 
+                angle: -Math.PI / 2 - Math.PI / 6,  // 前方左（上から30度左）
+                arc: Math.PI / 6,      // 30度の扇
+                x: -14, y: -14,        // 前方左寄り
+                label: '前左'
+            },
+            FrRH: { 
+                angle: -Math.PI / 2 + Math.PI / 6,  // 前方右（上から30度右）
+                arc: Math.PI / 6,      // 30度の扇
+                x: 14, y: -14,         // 前方右寄り
+                label: '前右'
+            },
+            // 側方センサー群（ビーム幅をFrと同じに統一）
+            RrLH: { 
+                angle: Math.PI,        // 真左方向
+                arc: Math.PI / 6,      // 30度の扇（45度から30度に変更）
+                x: -20, y: 0,          // 車体左側（円の縁）
+                label: '左後'
+            },
+            RrRH: { 
+                angle: 0,              // 真右方向
+                arc: Math.PI / 6,      // 30度の扇（45度から30度に変更）
+                x: 20, y: 0,           // 車体右側（円の縁）
+                label: '右後'
+            }
+        };
+
+        function drawVehicle(centerX, centerY) {
+            sensorCtx.save();
+            sensorCtx.translate(centerX, centerY);
+            
+            // 外側の円を描画
+            const circleRadius = 20;
+            sensorCtx.fillStyle = '#4444ff';
+            sensorCtx.beginPath();
+            sensorCtx.arc(0, 0, circleRadius, 0, 2 * Math.PI);
+            sensorCtx.fill();
+            
+            // 円の輪郭
+            sensorCtx.strokeStyle = '#6666ff';
+            sensorCtx.lineWidth = 3;
+            sensorCtx.stroke();
+            
+            // 内側の三角形（進行方向を示す）
+            sensorCtx.fillStyle = '#ffffff';
+            sensorCtx.beginPath();
+            sensorCtx.moveTo(0, -12);    // 頂点（前方）
+            sensorCtx.lineTo(-9, 8);     // 左下
+            sensorCtx.lineTo(9, 8);      // 右下
+            sensorCtx.closePath();
+            sensorCtx.fill();
+            
+            // 三角形の輪郭
+            sensorCtx.strokeStyle = '#cccccc';
+            sensorCtx.lineWidth = 2;
+            sensorCtx.stroke();
+            
+            // センサー位置をマーク
+            sensorCtx.fillStyle = '#ffff00';
+            sensorCtx.strokeStyle = '#ff8800';
+            sensorCtx.lineWidth = 1;
+            Object.entries(sensorConfig).forEach(([key, config]) => {
+                sensorCtx.beginPath();
+                sensorCtx.arc(config.x, config.y, 2, 0, 2 * Math.PI);
+                sensorCtx.fill();
+                sensorCtx.stroke();
+            });
+            
+            sensorCtx.restore();
+        }
+
+        function getDistanceColor(distance) {
+            if (distance < 300) {
+                return '#ff4444'; // 赤（危険）
+            } else if (distance < 600) {
+                return '#ffaa00'; // オレンジ（警告）
+            } else {
+                return '#44ff44'; // 緑（安全）
+            }
+        }
+
+        function drawSensorFan(centerX, centerY, sensorKey, distance) {
+            const config = sensorConfig[sensorKey];
+            if (!config) return;
+
+            sensorCtx.save();
+            sensorCtx.translate(centerX + config.x, centerY + config.y);
+            
+            // 距離に応じた扇の長さ（最大80px - 小さなキャンバス用に調整）
+            const maxRange = Math.min(distance / 10, 80);
+            
+            // 扇型を描画
+            sensorCtx.fillStyle = getDistanceColor(distance);
+            sensorCtx.globalAlpha = 0.6;
+            sensorCtx.beginPath();
+            sensorCtx.moveTo(0, 0);
+            sensorCtx.arc(0, 0, maxRange, 
+                   config.angle - config.arc / 2, 
+                   config.angle + config.arc / 2);
+            sensorCtx.closePath();
+            sensorCtx.fill();
+            
+            // 扇の輪郭
+            sensorCtx.globalAlpha = 1.0;
+            sensorCtx.strokeStyle = getDistanceColor(distance);
+            sensorCtx.lineWidth = 1;
+            sensorCtx.stroke();
+            
+            // 距離テキスト（小さなフォント）
+            sensorCtx.fillStyle = '#000000';  // 黒色に変更
+            sensorCtx.font = '8px Arial';
+            sensorCtx.textAlign = 'center';
+            const textX = Math.cos(config.angle) * (maxRange + 10);
+            const textY = Math.sin(config.angle) * (maxRange + 10);
+            sensorCtx.fillText(`${distance}mm`, textX, textY);
+            
+            sensorCtx.restore();
+        }
+
+        function drawGrid(centerX, centerY) {
+            sensorCtx.strokeStyle = '#333333';
+            sensorCtx.lineWidth = 1;
+            
+            // 同心円グリッド（調整された間隔）
+            for (let r = 20; r <= 100; r += 20) {
+                sensorCtx.beginPath();
+                sensorCtx.arc(centerX, centerY, r, 0, 2 * Math.PI);
+                sensorCtx.stroke();
+            }
+            
+            // 十字線
+            sensorCtx.beginPath();
+            sensorCtx.moveTo(centerX - 100, centerY);
+            sensorCtx.lineTo(centerX + 100, centerY);
+            sensorCtx.moveTo(centerX, centerY - 100);
+            sensorCtx.lineTo(centerX, centerY + 100);
+            sensorCtx.stroke();
+        }
+
+        function drawSensorValues(sensorData) {
+            // センサー値を左端に縦に表示（背景なし）
+            const startX = 5;  // 左端に配置
+            const startY = 5;   // キャンバス上端にさらに近づける
+            const lineHeight = 20;
+            
+            // センサーの表示順序
+            const sensorOrder = ['RrLH', 'FrLH', 'FrFR', 'FrRH', 'RrRH'];
+            
+            // センサー値をすべて黒色で表示
+            sensorCtx.fillStyle = '#000000';
+            sensorCtx.textAlign = 'left';
+            sensorCtx.font = '12px Arial';
+            
+            sensorOrder.forEach((key, index) => {
+                const value = sensorData[key];
+                if (value !== undefined) {
+                    const y = startY + 15 + (index * lineHeight);
+                    // キー名と値を1行で表示
+                    sensorCtx.fillText(`${key}: ${value} mm`, startX, y);
+                }
+            });
+        }
+
+        function drawSensorVisualization(ultrasonicRanges = {}) {
+            if (!sensorCanvas || !sensorCtx) {
+                console.error('Sensor canvas not initialized');
+                return;
+            }
+            
+            // キャンバスをクリア
+            sensorCtx.clearRect(0, 0, sensorCanvas.width, sensorCanvas.height);
+            
+            const centerX = sensorCanvas.width / 2 + 30;  // チャートを右にずらす
+            const centerY = sensorCanvas.height / 2 + 15;  // チャートを下にずらして上部の切れを回避
+            
+            // グリッドを描画
+            drawGrid(centerX, centerY);
+            
+            // デフォルトセンサー値（初期表示用）
+            const defaultSensorValues = {
+                RrLH: 850,
+                FrLH: 450,
+                FrFR: 250,
+                FrRH: 650,
+                RrRH: 1200
+            };
+            
+            // データがない場合はデフォルト値を使用
+            const sensorData = (ultrasonicRanges && Object.keys(ultrasonicRanges).length > 0) ? ultrasonicRanges : defaultSensorValues;
+            
+            // センサー扇型を描画
+            Object.entries(sensorData).forEach(([key, value]) => {
+                if (sensorConfig[key] && value !== undefined) {
+                    drawSensorFan(centerX, centerY, key, value);
+                }
+            });
+            
+            // 車体を最後に描画（上に表示）
+            drawVehicle(centerX, centerY);
+            
+            // センサー値を左側に縦に表示
+            drawSensorValues(sensorData);
+        }
+
+        // センサーキャンバスを初期化する関数
+        function initializeSensorCanvas() {
+            sensorCanvas = document.getElementById('sensorCanvas');
+            if (!sensorCanvas) {
+                console.error('Sensor canvas element not found!');
+                return;
+            }
+            sensorCtx = sensorCanvas.getContext('2d');
+            console.log('Sensor canvas initialized:', sensorCanvas.width, 'x', sensorCanvas.height);
+            
+            // 初期描画
+            drawSensorVisualization();
+        }
+
+        // ステアリングハンドルを描画する関数
+        function drawSteeringWheel(steeringValue) {
+            const canvas = document.getElementById('steeringCanvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = 30;
+            
+            // キャンバスをクリア
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 回転角度を計算（-1 to 1 -> -90度 to 90度）
+            const rotation = steeringValue * Math.PI / 2;
+            
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(rotation);
+            
+            // ハンドル外枠
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // ハンドル内部
+            ctx.beginPath();
+            ctx.arc(0, 0, radius - 5, 0, 2 * Math.PI);
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fill();
+            
+            // 中央のハブ
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, 2 * Math.PI);
+            ctx.fillStyle = '#666';
+            ctx.fill();
+            
+            // スポーク（上下左右）
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, -radius + 5);
+            ctx.lineTo(0, -8);
+            ctx.moveTo(0, 8);
+            ctx.lineTo(0, radius - 5);
+            ctx.moveTo(-radius + 5, 0);
+            ctx.lineTo(-8, 0);
+            ctx.moveTo(8, 0);
+            ctx.lineTo(radius - 5, 0);
+            ctx.stroke();
+            
+            // 上方向インジケーター（12時の位置）
+            ctx.beginPath();
+            ctx.arc(0, -radius + 12, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = '#ff4444';
+            ctx.fill();
+            
+            ctx.restore();
+        }
+
+        // スロットルゲージを描画する関数
+        function drawThrottleGauge(throttleValue) {
+            const canvas = document.getElementById('throttleCanvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // キャンバスをクリア
+            ctx.clearRect(0, 0, width, height);
+            
+            // ゲージ背景
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(10, 10, 30, height - 20);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(10, 10, 30, height - 20);
+            
+            // 中央線（0の位置）
+            const centerY = height / 2;
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(5, centerY);
+            ctx.lineTo(45, centerY);
+            ctx.stroke();
+            
+            // スケール線
+            for (let i = 1; i <= 4; i++) {
+                const y1 = centerY - (i * (height - 20) / 8);  // 前進側
+                const y2 = centerY + (i * (height - 20) / 8);  // 後進側
+                
+                ctx.beginPath();
+                ctx.moveTo(7, y1);
+                ctx.lineTo(13, y1);
+                ctx.moveTo(7, y2);
+                ctx.lineTo(13, y2);
+                ctx.stroke();
+            }
+            
+            // ゲージバー
+            let barHeight = Math.abs(throttleValue) * (height - 20) / 2;
+            let barY, barColor;
+            
+            if (throttleValue > 0) {
+                // 前進（上向き）
+                barY = centerY - barHeight;
+                barColor = '#44ff44';  // 緑
+            } else if (throttleValue < 0) {
+                // 後進（下向き）
+                barY = centerY;
+                barColor = '#ff4444';  // 赤
+            } else {
+                // 停止
+                barHeight = 0;
+                barY = centerY;
+                barColor = '#666';
+            }
+            
+            if (barHeight > 0) {
+                ctx.fillStyle = barColor;
+                ctx.fillRect(11, barY, 28, barHeight);
+            }
+            
+            // ラベル
+            ctx.fillStyle = '#333';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('F', width / 2, 8);  // Forward
+            ctx.fillText('R', width / 2, height - 2);  // Reverse
+        }
+
+
+        // リサイズ機能の実装
+        let isResizingHorizontal = false;
+        let isResizingVertical = false;
+        
+        function initResizers() {
+            const horizontalResizer = document.getElementById('horizontalResizer');
+            const verticalResizer = document.getElementById('verticalResizer');
+            const cameraContainer = document.querySelector('.camera-container');
+            const controlContainer = document.querySelector('.control-container');
+            const mainWrapper = document.querySelector('.main-wrapper');
+            const container = document.querySelector('.container');
+            const realtimeData = document.querySelector('.realtime-data');
+            
+            // 水平リサイザー (カメラとコントロールパネルの間)
+            horizontalResizer.addEventListener('mousedown', (e) => {
+                isResizingHorizontal = true;
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+            
+            // 垂直リサイザー (メインコンテナとリアルタイムデータの間)
+            verticalResizer.addEventListener('mousedown', (e) => {
+                isResizingVertical = true;
+                document.body.style.cursor = 'row-resize';
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (isResizingHorizontal) {
+                    const containerRect = container.getBoundingClientRect();
+                    const newControlWidth = containerRect.right - e.clientX - 8; // 8px for resizer
+                    
+                    if (newControlWidth >= 300 && newControlWidth <= 800) {
+                        controlContainer.style.width = newControlWidth + 'px';
+                    }
+                } else if (isResizingVertical) {
+                    const wrapperRect = mainWrapper.getBoundingClientRect();
+                    const newRealtimeHeight = wrapperRect.bottom - e.clientY - 8; // 8px for resizer
+                    
+                    if (newRealtimeHeight >= 80 && newRealtimeHeight <= 400) {
+                        realtimeData.style.height = newRealtimeHeight + 'px';
+                    }
+                }
+            });
+            
+            document.addEventListener('mouseup', () => {
+                isResizingHorizontal = false;
+                isResizingVertical = false;
+                document.body.style.cursor = 'default';
+            });
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            // WebSocket接続を開始
+            connectWebSocket();
+            
+            // センサーキャンバスの初期化
+            initializeSensorCanvas();
+            
+            // ステアリングハンドルとスロットルゲージの初期化
+            drawSteeringWheel(0);
+            drawThrottleGauge(0);
+            
+            // リサイザーの初期化
+            initResizers();
+            
+            // WebSocket接続後に設定を取得
+            setTimeout(() => {
+                fetchConfigAndSetDefaults();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

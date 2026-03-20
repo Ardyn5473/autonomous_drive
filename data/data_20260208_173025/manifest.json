@@ -1,0 +1,5 @@
+["cam/image_array", "user/angle", "user/throttle", "user/mode", "ultrasonic/RrLH", "ultrasonic/FrLH", "ultrasonic/FrFR", "ultrasonic/FrRH", "ultrasonic/RrRH"]
+["image_array", "float", "float", "str", "int", "int", "int", "int", "int"]
+{}
+{"created_at": 1770539425.02531, "sessions": {"all_full_ids": ["26-02-08_17"], "last_id": 0, "last_full_id": "26-02-08_17"}}
+{"paths": ["catalog_0.catalog"], "current_index": 936, "max_len": 1000, "deleted_indexes": []}

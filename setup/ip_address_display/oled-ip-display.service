@@ -1,0 +1,18 @@
+# OLED IP Address Display Service
+# Installation: sudo cp setup/ip_address_display/oled-ip-display.service /etc/systemd/system/
+# Enable: sudo systemctl enable oled-ip-display.service
+
+[Unit]
+Description=OLED IP Address Display
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/jetson/projects/togikaidrive-dev/setup/ip_address_display/oled_ip_display.sh
+RemainAfterExit=yes
+User=jetson
+WorkingDirectory=/home/jetson/projects/togikaidrive-dev/setup/ip_address_display
+
+[Install]
+WantedBy=multi-user.target

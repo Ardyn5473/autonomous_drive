@@ -1,0 +1,36 @@
+name: Deploy Site
+
+on:
+  push:
+    branches: [main, latest]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install MkDocs and dependencies
+        run: |
+          pip install mkdocs
+          pip install mkdocs-material
+          pip install pymdown-extensions
+
+      - name: Build
+        working-directory: docs-site
+        run: mkdocs build
+
+      - name: Deploy to public repo
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.SITE }}
+          external_repository: autonomous-minicar-battle/togikaidrive-site
+          publish_branch: main
+          publish_dir: ./docs-site/site

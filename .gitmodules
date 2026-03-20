@@ -1,0 +1,3 @@
+[submodule "annotation_training_d2j"]
+	path = annotation_training_d2j
+	url = https://github.com/Romihi/annotation_training_d2j.git

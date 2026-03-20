@@ -1,0 +1,12 @@
+Looking in indexes: https://pypi.org/simple, https://www.piwheels.org/simple
+Collecting flask-cors
+  Downloading https://www.piwheels.org/simple/flask-cors/flask_cors-6.0.1-py3-none-any.whl (13 kB)
+Requirement already satisfied: flask>=0.9 in ./venv/lib/python3.11/site-packages (from flask-cors) (3.0.3)
+Requirement already satisfied: Werkzeug>=0.7 in ./venv/lib/python3.11/site-packages (from flask-cors) (3.1.4)
+Requirement already satisfied: Jinja2>=3.1.2 in ./venv/lib/python3.11/site-packages (from flask>=0.9->flask-cors) (3.1.6)
+Requirement already satisfied: itsdangerous>=2.1.2 in ./venv/lib/python3.11/site-packages (from flask>=0.9->flask-cors) (2.2.0)
+Requirement already satisfied: click>=8.1.3 in ./venv/lib/python3.11/site-packages (from flask>=0.9->flask-cors) (8.3.1)
+Requirement already satisfied: blinker>=1.6.2 in ./venv/lib/python3.11/site-packages (from flask>=0.9->flask-cors) (1.9.0)
+Requirement already satisfied: markupsafe>=2.1.1 in ./venv/lib/python3.11/site-packages (from Werkzeug>=0.7->flask-cors) (2.1.5)
+Installing collected packages: flask-cors
+Successfully installed flask-cors-6.0.1
