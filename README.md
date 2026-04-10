@@ -1,16 +1,8 @@
-# togikaidrive
+# autonomous_drive
 
 ## ***Mobility for All to Study!***
 
 超音波センサ、LiDAR、カメラなどのセンサーと1/10~サイズのミニカーで自動運転するプログラム。
-自動運転ミニカーバトルや出前授業等で活用できます。
-
-
-## ドキュメント
-
-**詳細なドキュメント・講座資料はこちら:**
-
-https://autonomous-minicar-battle.github.io/togikaidrive-site/
 
 ## 主なプログラム概要
 
