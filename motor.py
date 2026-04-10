@@ -122,8 +122,8 @@ class Motor:
 
     def cleanup(self):
             # 停止処理
-            self.set_throttle_pwm_value(self.THROTTLE_STOPPED_PWM)
-            self.set_steering_pwm_value(self.STEERING_CENTER_PWM)
+            self.set_throttle_pwm_value(0.0)
+            self.set_steering_pwm_value(0.0)
             print("Motor cleanup complete.")
 
 # ROS2の有無を判定してインポート
