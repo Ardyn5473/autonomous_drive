@@ -69,6 +69,11 @@ if "lidar" in config.ACTIVE_SENSORS:
 if config.PLAN in ["nn", "donkeycar", "resnet18", "mobilevit_xxs", "edgenext_xxsmall"]:
     from train_pytorch import NeuralNetwork, ConvolutionalNeuralNetwork, load_model, get_model_from_catalog
     import torch
+    
+# OpenVINO推論エンジンのインポート
+if getattr(config, 'INFERENCE_ENGINE', 'pytorch') == 'openvino':
+    from openvino_inference import OpenVINOModel, load_openvino_model
+    logger.info("OpenVINO推論エンジンを使用します")
 
 # 位置推論モデルのインポート（必要な場合）
 if config.USE_POSITION_SWITCHING:
@@ -236,6 +241,19 @@ def reload_model():
         logger.info("Please check MODEL_NAME in config.py or train a model first.")
         return None
 
+　　 # --- OpenVINO推論エンジンモード ---
+    if getattr(config, 'INFERENCE_ENGINE', 'pytorch') == 'openvino':
+        try:
+            model = load_openvino_model(config.MODEL_PATH, device_name="CPU")
+            model._plan = config.PLAN
+            logger.info(f"OpenVINOモデルロード完了: {config.MODEL_NAME} (PLAN: {config.PLAN})")
+            return model
+        except Exception as e:
+            logger.error(f"OpenVINOモデルのロードに失敗: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
     # デバイスの設定（GPUが利用可能な場合はGPUを使用）
     if config.PLAN in ["nn", "donkeycar", "resnet18", "mobilevit_xxs", "edgenext_xxsmall"]:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
