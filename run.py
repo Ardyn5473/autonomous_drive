@@ -241,7 +241,7 @@ def reload_model():
         logger.info("Please check MODEL_NAME in config.py or train a model first.")
         return None
 
-　　 # --- OpenVINO推論エンジンモード ---
+    # --- OpenVINO推論エンジンモード ---
     if getattr(config, 'INFERENCE_ENGINE', 'pytorch') == 'openvino':
         try:
             model = load_openvino_model(config.MODEL_PATH, device_name="CPU")
